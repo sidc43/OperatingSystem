@@ -26,9 +26,15 @@
 #define LIGHT_MAGENTA 0x0D
 #define YELLOW 0x0E
 #define WHITE 0x0F
+#define VGA_COLOR(fg, bg) ((bg << 4) | (fg))
 
-
-#define VGA_COLOR(fg, bg) ((bg << 4) | (fg)) 
+#ifndef size_t
+    #if defined(__x86_64__) || defined(_M_X64)
+        typedef unsigned long size_t;
+    #else
+        typedef unsigned int size_t;
+    #endif
+#endif
 
 #include "kstdint.h"
 #include "kstring.h"
@@ -47,7 +53,8 @@ namespace kmdio
     uint16_t cursor_x = 0, cursor_y = 0;
     uint16_t* VIDEO_MEMORY = (uint16_t*)0xB8000;
 
-    inline uint16_t make_vga_entry(char c, uint8_t color) {
+    inline uint16_t make_vga_entry(char c, uint8_t color) 
+    {
         return (uint16_t)c | ((uint16_t)color << 8);
     }
 
@@ -88,63 +95,47 @@ namespace kmdio
         }
     }
 
-    char* itoa(int num)
+    void itoa(int value, char* buffer) 
     {
-        bool negative = false;
-        if (num < 0)
+        int i = 0;
+        bool isNegative = (value < 0);
+
+        if (isNegative) 
         {
-            negative = true;
-            num = -num;
+            value = -value;
         }
 
-        if (num == 0)
+        do 
         {
-            char* buffer;
-            buffer[0] = '0';
-            buffer[1] = '\0';
-            return buffer;
+            buffer[i++] = '0' + (value % 10); 
+            value /= 10;
+        } while (value);
+
+        if (isNegative) 
+        {
+            buffer[i++] = '-';
         }
 
-        int temp = num;
-        int length = 0;
-        while (temp > 0)
+        buffer[i] = '\0';
+
+        for (int j = 0; j < i / 2; j++) 
         {
-            temp /= 10;
-            length++;
+            char temp = buffer[j];
+            buffer[j] = buffer[i - j - 1];
+            buffer[i - j - 1] = temp;
         }
-
-        if (negative)
-        {
-            length++;
-        }
-
-        char* buffer;
-        buffer[length] = '\0';
-
-        int index = length - 1;
-        while (num > 0)
-        {
-            int digit = num % 10;
-            buffer[index] = '0' + digit;
-            num /= 10;
-            index--;
-        }
-
-        if (negative)
-        {
-            buffer[0] = '-';
-        }
-
-        return buffer;
     }
 
-    static inline uint8_t inb(uint16_t port) {
+
+    static inline uint8_t inb(uint16_t port) 
+    {
         uint8_t ret;
         asm volatile ("inb %1, %0" : "=a"(ret) : "Nd"(port));
         return ret;
     }
 
-    static inline void outb(uint16_t port, uint8_t value) {
+    static inline void outb(uint16_t port, uint8_t value) 
+    {
         asm volatile ("outb %0, %1" : : "a"(value), "Nd"(port));
     }
 
@@ -271,31 +262,42 @@ namespace kmdio
         buffer[index] = '\0';
     }
 
-    inline void kout(const kstring& str) {
-        for (int i = 0; i < str.size; ++i) {
+    inline void kout(const kstring& str) 
+    {
+        for (int i = 0; i < str.size; ++i) 
+        {
             putc(str[i]);
         }
     }
-    inline void kin(kstring& str) {
+   
+    inline void kin(kstring& str) 
+    {
         int index = 0;
 
-        while (index < str.size - 1) { // Use str.size instead of kstring::len
+        while (index < str.size - 1) 
+        { 
             char c = getc();
 
-            if (c == '\n' || c == '\r') {
+            if (c == '\n' || c == '\r') 
+            {
                 putc('\n');
                 break;
-            } else if (c == '\b') {
-                if (index > 0) {
+            } 
+            else if (c == '\b') 
+            {
+                if (index > 0) 
+                {
                     index--;
                     putc('\b');
                 }
-            } else {
+            } 
+            else 
+            {
                 str[index++] = c;
                 putc(c);
             }
         }
 
-        str[index] = '\0'; // Null-terminate
+        str[index] = '\0';
     }
 }

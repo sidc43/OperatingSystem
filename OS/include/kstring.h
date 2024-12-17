@@ -13,7 +13,8 @@
             ctos() - convert char* to kstring
 */
 
-class kstring {
+class kstring 
+{
     public:
         static constexpr int MAX_SIZE = 256;   
         char content[MAX_SIZE];               
@@ -56,9 +57,11 @@ class kstring {
             return content[index];
         }
 
-        void set(const char* str) {
+        void set(const char* str) 
+        {
             size = 0; 
-            while (str[size] != '\0' && size < MAX_SIZE - 1) {
+            while (str[size] != '\0' && size < MAX_SIZE - 1) 
+            {
                 content[size] = str[size];
                 size++;
             }

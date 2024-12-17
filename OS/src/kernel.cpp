@@ -1,4 +1,5 @@
 #include "../include/kmdio.h"
+#include "../include/klist.h"
 
 using namespace kmdio;
 
@@ -18,12 +19,9 @@ extern "C" void call_global_constructors()
 extern "C" void kmain(void) 
 {
     clear(WHITE); 
+    malloc_init();
 
     char buffer[100];
-
-    kstring msg("Welcome to nullOS!\n");
-    kout(msg);
-
 
     while (true) 
     {
