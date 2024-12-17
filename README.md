@@ -17,5 +17,7 @@
 * Stack
 * Queue
 * Dictionary
+* Storage
+* File I/O
 * Prompt to create user and store somewhere
 
