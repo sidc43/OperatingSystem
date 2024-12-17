@@ -269,10 +269,10 @@ namespace kmdio
             putc(str[i]);
         }
     }
-<<<<<<< HEAD
    
-=======
->>>>>>> 62cba719ce99eae73c2850e22a1f01bfb7a2c3b1
+
+
+   
     inline void kin(kstring& str) 
     {
         int index = 0;
