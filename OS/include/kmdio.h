@@ -271,31 +271,41 @@ namespace kmdio
         buffer[index] = '\0';
     }
 
-    inline void kout(const kstring& str) {
-        for (int i = 0; i < str.size; ++i) {
+    inline void kout(const kstring& str) 
+    {
+        for (int i = 0; i < str.size; ++i) 
+        {
             putc(str[i]);
         }
     }
-    inline void kin(kstring& str) {
+    inline void kin(kstring& str) 
+    {
         int index = 0;
 
-        while (index < str.size - 1) { // Use str.size instead of kstring::len
+        while (index < str.size - 1) 
+        { 
             char c = getc();
 
-            if (c == '\n' || c == '\r') {
+            if (c == '\n' || c == '\r') 
+            {
                 putc('\n');
                 break;
-            } else if (c == '\b') {
-                if (index > 0) {
+            } 
+            else if (c == '\b') 
+            {
+                if (index > 0) 
+                {
                     index--;
                     putc('\b');
                 }
-            } else {
+            } 
+            else 
+            {
                 str[index++] = c;
                 putc(c);
             }
         }
 
-        str[index] = '\0'; // Null-terminate
+        str[index] = '\0';
     }
 }
