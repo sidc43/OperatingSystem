@@ -7,8 +7,7 @@
 * make run
 
 # Implemented
-* Basic print function
-* Basic scan function
+* Command line I/O
 * String class
 * Dynamic memory management
 
