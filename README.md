@@ -7,7 +7,7 @@
 * make run
 
 # Implemented
-* C++ like command line I/O (kout, kin)
+* Command line I/O (kout, kin)
 * String class
 * Dynamic memory management
 * List
