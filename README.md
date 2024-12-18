@@ -7,12 +7,12 @@
 * make run
 
 # Implemented
-* Command line I/O
+* C++ like command line I/O (kout, kin)
 * String class
 * Dynamic memory management
+* List
 
 # To do
-* List
 * Stack
 * Queue
 * Dictionary
