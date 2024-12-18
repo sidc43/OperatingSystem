@@ -13,6 +13,7 @@
 * List
 
 # To do
+* Support for capital letters input
 * Stack
 * Queue
 * Dictionary
