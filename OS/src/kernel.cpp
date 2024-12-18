@@ -23,12 +23,19 @@ extern "C" void kmain(void)
 
     char buffer[100];
 
+    list<int> l;
+    l.push(4454);
+    l.push(3);
+    l.push(2);
+    l.push(1);
+    l.push(5);
+
+    kout << "welcome to nullOS!";
+
     while (true) 
     {
-        kout("\nroot> ");
-        
-        kin(buffer, sizeof(buffer));
-        kout("\nYou entered: ");
-        kout(buffer);
+        kout << "\nroot> ";
+        kin >> buffer;
+        kout << "\nYou entered: " << buffer;
     }
 }

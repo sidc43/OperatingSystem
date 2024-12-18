@@ -41,102 +41,49 @@
 
 /*
     Usage
-        kout(char*)
-        kout(kstring)
-        kin(char* buffer, int max_size) - reads line from console and puts into buffer
-        itoa(int) - converts int to char*
+        kout << "X = " << 4;
+        kin >> buffer;
         clear() - clear console
 */
 
 namespace kmdio 
 {
-    uint16_t cursor_x = 0, cursor_y = 0;
-    uint16_t* VIDEO_MEMORY = (uint16_t*)0xB8000;
+    inline uint16_t cursor_x = 0, cursor_y = 0;
+    inline uint16_t* VIDEO_MEMORY = (uint16_t*)0xB8000;
 
-    inline uint16_t make_vga_entry(char c, uint8_t color) 
-    {
-        return (uint16_t)c | ((uint16_t)color << 8);
-    }
-
-    inline unsigned char port_byte_in(unsigned short port) 
-    {
-        unsigned char res;
-        __asm__ volatile ("inb %1, %0" : "=a"(res) : "Nd"(port));
-        return res;
-    }
-
-    inline char code_to_char(unsigned char code) 
-    {
-        char ascii[128] = {
-            0,  27, '1', '2', '3', '4', '5', '6', '7', '8', 
-            '9', '0', '-', '=', '\b', 
-            '\t',   
-            'q', 'w', 'e', 'r', 
-            't', 'y', 'u', 'i', 'o', 'p', '[', ']', '\n', 
-            0,      
-            'a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', ';', 
-            '\'', '`',   0,    
-            '\\', 'z', 'x', 'c', 'v', 'b', 'n',     
-            'm', ',', '.', '/',   0,    
-            '*',  0, 
-            ' ', 
-            0, 
-        };
-
-        return (code < 128) ? ascii[code] : 0;
-    }
-
-    inline void clear(int color) 
-    {
-        for (unsigned int j = 0; j < VGA_W * VGA_H * 2; j += 2) 
-        {
-            VIDEO_MEMORY[j] = ' ';
-            VIDEO_MEMORY[j + 1] = color;
-        }
-    }
-
-    void itoa(int value, char* buffer) 
-    {
-        int i = 0;
-        bool isNegative = (value < 0);
-
-        if (isNegative) 
-        {
-            value = -value;
-        }
-
-        do 
-        {
-            buffer[i++] = '0' + (value % 10); 
-            value /= 10;
-        } while (value);
-
-        if (isNegative) 
-        {
-            buffer[i++] = '-';
-        }
-
-        buffer[i] = '\0';
-
-        for (int j = 0; j < i / 2; j++) 
-        {
-            char temp = buffer[j];
-            buffer[j] = buffer[i - j - 1];
-            buffer[i - j - 1] = temp;
-        }
-    }
-
-
-    static inline uint8_t inb(uint16_t port) 
+    inline uint8_t inb(uint16_t port) 
     {
         uint8_t ret;
         asm volatile ("inb %1, %0" : "=a"(ret) : "Nd"(port));
         return ret;
     }
 
-    static inline void outb(uint16_t port, uint8_t value) 
+    inline void outb(uint16_t port, uint8_t value) 
     {
         asm volatile ("outb %0, %1" : : "a"(value), "Nd"(port));
+    }
+
+    inline void itoa(int value, char* buffer) 
+    {
+        int i = 0;
+        bool isNegative = (value < 0);
+
+        if (isNegative) value = -value;
+
+        do {
+            buffer[i++] = '0' + (value % 10);
+            value /= 10;
+        } while (value);
+
+        if (isNegative) buffer[i++] = '-';
+
+        buffer[i] = '\0';
+
+        for (int j = 0; j < i / 2; j++) {
+            char temp = buffer[j];
+            buffer[j] = buffer[i - j - 1];
+            buffer[i - j - 1] = temp;
+        }
     }
 
     inline void move_cursor() 
@@ -149,158 +96,109 @@ namespace kmdio
         outb(0x3D5, pos & 0xFF);         
     }
 
+    inline void clear(int color = VGA_COLOR(WHITE, 0)) 
+    {
+        for (unsigned int i = 0; i < VGA_H * VGA_W; i++) 
+        {
+            VIDEO_MEMORY[i] = (uint16_t)' ' | (color << 8);
+        }
+        cursor_x = 0;
+        cursor_y = 0;
+        move_cursor();
+    }
+
     inline void putc(char c) 
     {
         if (c == '\n') 
         { 
-            cursor_x = 0;
-            cursor_y++;
+            cursor_x = 0; cursor_y++;
         } 
         else if (c == '\b') 
-        { 
+        {
             if (cursor_x > 0) 
             {
                 cursor_x--;
-                VIDEO_MEMORY[cursor_y * VGA_W + cursor_x] = make_vga_entry(' ', WHITE);
+                VIDEO_MEMORY[cursor_y * VGA_W + cursor_x] = (uint16_t)' ' | (WHITE << 8);
             }
         } 
         else 
         {
-            VIDEO_MEMORY[cursor_y * VGA_W + cursor_x] = make_vga_entry(c, WHITE);
+            VIDEO_MEMORY[cursor_y * VGA_W + cursor_x] = (uint16_t)c | (WHITE << 8);
             cursor_x++;
         }
 
-        if (cursor_x >= VGA_W) 
-        {
-            cursor_x = 0;
-            cursor_y++;
-        }
-
-        if (cursor_y >= VGA_H) 
-        {
-            for (int y = 1; y < VGA_H; y++) 
-            {
-                for (int x = 0; x < VGA_W; x++) 
-                {
-                    VIDEO_MEMORY[(y - 1) * VGA_W + x] = VIDEO_MEMORY[y * VGA_W + x];
-                }
-            }
-
-            for (int x = 0; x < VGA_W; x++) 
-            {
-                VIDEO_MEMORY[(VGA_H - 1) * VGA_W + x] = make_vga_entry(' ', WHITE);
-            }
-            cursor_y = VGA_H - 1;
-        }
-
+        if (cursor_x >= VGA_W) { cursor_x = 0; cursor_y++; }
+        if (cursor_y >= VGA_H) { clear(); } 
         move_cursor();
-    }
-
-    inline void kout(const char* str) 
-    {
-        while (*str) 
-        {
-            putc(*str++);
-        }
     }
 
     inline char getc() 
     {
-        char c = 0;
-
         while (true) 
         {
             if (inb(0x64) & 0x01) 
-            { 
+            {
                 uint8_t scancode = inb(KB_DATA_PORT);
+                static const char scancode_ascii[] = {
+                    0, 27, '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '=', '\b',
+                    '\t', 'q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p', '[', ']', '\n',
+                    0, 'a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', ';', '\'', '`', 0, '\\',
+                    'z', 'x', 'c', 'v', 'b', 'n', 'm', ',', '.', '/', 0, '*', 0, ' ', 0
+                };
+                if (scancode < 128) return scancode_ascii[scancode];
+            }
+        }
+    }
 
-                if (scancode < 128) 
+    class kout_stream 
+    {
+    public:
+        kout_stream& operator<<(const char* str) 
+        {
+            while (*str) putc(*str++);
+            return *this;
+        }
+
+        kout_stream& operator<<(int num) 
+        {
+            char buffer[12];
+            itoa(num, buffer);
+            return *this << buffer;
+        }
+
+        kout_stream& operator<<(const kstring& str) 
+        {
+            for (int i = 0; i < str.size; ++i) putc(str[i]);
+            return *this;
+        }
+    };
+
+    class kin_stream 
+    {
+    public:
+        kin_stream& operator>>(char* buffer) 
+        {
+            int index = 0;
+            while (true) 
+            {
+                char c = getc();
+                if (c == '\n') break;
+                if (c == '\b' && index > 0) 
+                {
+                    index--;
+                    putc('\b');
+                } 
+                else if (c >= ' ') 
                 { 
-                    static const char scancode_ascii[] = {
-                        0, 27, '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '=', '\b',
-                        '\t', 'q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p', '[', ']', '\n',
-                        0, 'a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', ';', '\'', '`', 0, '\\',
-                        'z', 'x', 'c', 'v', 'b', 'n', 'm', ',', '.', '/', 0, '*', 0, ' ', 0
-                    };
-                    c = scancode_ascii[scancode];
-                    break;
+                    buffer[index++] = c;
+                    putc(c);
                 }
             }
+            buffer[index] = '\0';
+            return *this;
         }
+    };
 
-        return c;
-    }
-
-    inline void kin(char* buffer, int size) 
-    {
-        int index = 0;
-
-        while (index < size - 1) 
-        {
-            char c = getc();
-
-            if (c == '\n' || c == '\r') 
-            { 
-                putc('\n');
-                break;
-            } 
-            else if (c == '\b') 
-            { 
-                if (index > 0) 
-                {
-                    index--;
-                    putc('\b');
-                }
-            } 
-            else if (c) 
-            { 
-                buffer[index++] = c;
-                putc(c);
-            }
-        }
-
-        buffer[index] = '\0';
-    }
-
-    inline void kout(const kstring& str) 
-    {
-        for (int i = 0; i < str.size; ++i) 
-        {
-            putc(str[i]);
-        }
-    }
-   
-
-
-   
-    inline void kin(kstring& str) 
-    {
-        int index = 0;
-
-        while (index < str.size - 1) 
-        { 
-            char c = getc();
-
-            if (c == '\n' || c == '\r') 
-            {
-                putc('\n');
-                break;
-            } 
-            else if (c == '\b') 
-            {
-                if (index > 0) 
-                {
-                    index--;
-                    putc('\b');
-                }
-            } 
-            else 
-            {
-                str[index++] = c;
-                putc(c);
-            }
-        }
-
-        str[index] = '\0';
-    }
+    inline kout_stream kout;
+    inline kin_stream kin;
 }

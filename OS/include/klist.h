@@ -50,9 +50,87 @@ class list
             size++;
         }
 
-        T pop();
-        T remove(unsigned int index);
-        void insert(unsigned int index);
+        void pop()
+        {
+            T removed = data[size];
+            if (capacity > 0)
+            {
+                T* new_data = new T[capacity];
+
+                for (unsigned int i = 0; i < size; i++) 
+                {
+                    new_data[i] = data[i];
+                }
+
+                delete[] data;
+                data = new_data;
+                size--;
+                //return removed;
+            }
+            else
+            {
+                kernel_panic("List is too small to pop.");
+            }
+        }
+
+        void remove(unsigned int index)
+        {
+            T removed = data[index];
+            if (capacity > 0)
+            {
+                T* new_data = new T[capacity];
+
+                for (unsigned int i = 0; i < index; i++)
+                {
+                    new_data[i] = data[i];
+                }
+
+                for (unsigned int i = index + 1; i < size; i++)
+                {
+                    new_data[i - 1] = data[i];
+                }
+
+                delete[] data;
+                size--;
+                data = new_data;
+               // return removed;
+            }
+            else
+            {
+                kernel_panic("List is too small to pop.");
+            }
+        }
+
+        void insert(unsigned int index, const T& value) 
+        {
+            if (index > size) 
+            {
+                kernel_panic("Index out of bounds."); 
+            }
+
+            if (size == capacity) 
+            {
+                capacity = (capacity == 0) ? 1 : capacity * 2; 
+                T* new_data = new T[capacity];
+
+                for (unsigned int i = 0; i < size; i++) 
+                {
+                    new_data[i] = data[i];
+                }
+
+                delete[] data; 
+                data = new_data;
+            }
+
+            for (unsigned int i = size; i > index; i--) 
+            {
+                data[i] = data[i - 1];
+            }
+
+            data[index] = value;
+
+            size++; 
+        }
 
         T& operator[](unsigned int index) 
         {
@@ -71,4 +149,14 @@ class list
             }
             return data[index];
         }
+
+        //friend kout_stream& operator<<(kout_stream& kstream, const list& l) 
+        //{
+        //    kstream << "[";
+        //    for (int i = 0; i < l.size - 1; i++)
+        //        kstream << l[i] << ", ";
+//
+        //    kstream << l[l.size - 1] << "]";
+        //    return kstream;
+        //}
 };

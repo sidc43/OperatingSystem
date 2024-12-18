@@ -18,9 +18,9 @@ Block* free_list_head = NULL;
 
 void kernel_panic(const char* message) 
 {
-    kout("KERNEL PANIC: ");
-    kout(message);
-    kout("\nSystem Halted.");
+    //kout << ("KERNEL PANIC: ");
+    //kout << (message);
+    //kout << ("\nSystem Halted.");
 
     while (true) 
     {
