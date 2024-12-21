@@ -3,19 +3,12 @@
 #include "../include/kmap.h"
 #include "../include/ktuple.h"
 #include "../include/kstdlib.h"
+#include "../include/kfunctional.h"
 
 using namespace kmdio;
 using namespace collections;
 
-/*
-    Function types:
-        [type]func[num_args]
-        intfunc2
-        voidfunc1
-*/
-
 typedef void (*constructor)();
-typedef void (*voidfunc1)(kstring);
 
 extern "C" constructor __start_ctors; 
 extern "C" constructor __end_ctors;   
@@ -32,8 +25,11 @@ extern "C" void kmain(void)
 {
     clear(WHITE); 
     malloc_init();
-    
     char buffer[100];
+
+    kmap<kstring, voidfunc0> no_param;
+    kmap<kstring, voidfunc1> single_param;
+    kmap<kstring, voidfunc2> double_param;
 
     kout << light_green << "Welcome to nullOS" << reset << endl;
     
@@ -42,9 +38,9 @@ extern "C" void kmain(void)
     while (true) 
     {
         if (input == "exit")
-            kstdlib::exit_kernel(0);
+            kstdlib::exit_kernel(HALT);
         kout << "root> ";
         kin >> input;
-        kout << "\nYou entered: " << input << endl;
+        kout << "\nYou entered: " << light_cyan << input << reset << endl;
     }
 }

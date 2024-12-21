@@ -1,5 +1,9 @@
 #pragma once
 
+#define HALT 0
+#define REBOOT 1
+#define POWER_OFF 2
+
 #include "kmdio.h"
 
 using namespace kmdio;
@@ -23,22 +27,22 @@ namespace kstdlib
         asm volatile("cli");
         asm volatile("outw %0, %1" : : "a"((uint16_t)0x2000), "Nd"(0x604));
     }
-    
+
     inline void exit_kernel(int mode) 
     {
         switch (mode) 
         {
-            case 0: 
-                kout << "Halting the CPU...\n";
+            case HALT: 
+                kout << light_red << "Halting the CPU...\n" << reset;
                 kstdlib::halt_cpu();
                 break;
 
-            case 1: 
+            case REBOOT: 
                 kout << "Rebooting the system...\n";
                 kstdlib::reboot();
                 break;
 
-            case 2: 
+            case POWER_OFF: 
                 kout << "Powering off the system...\n";
                 kstdlib::power_off();
                 break;
