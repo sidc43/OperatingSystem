@@ -7,8 +7,15 @@
 using namespace kmdio;
 using namespace collections;
 
+/*
+    Function types:
+        [type]func[num_args]
+        intfunc2
+        voidfunc1
+*/
+
 typedef void (*constructor)();
-typedef void (*void_function)();
+typedef void (*voidfunc1)(kstring);
 
 extern "C" constructor __start_ctors; 
 extern "C" constructor __end_ctors;   
@@ -28,7 +35,7 @@ extern "C" void kmain(void)
     
     char buffer[100];
 
-    kout << light_green << "welcome to nullOS" << reset << endl;
+    kout << light_green << "Welcome to nullOS" << reset << endl;
     
     kstring input;
 

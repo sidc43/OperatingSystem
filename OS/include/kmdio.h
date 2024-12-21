@@ -132,18 +132,70 @@ namespace kmdio
 
     inline char getc() 
     {
+        static bool shift_pressed = false; 
+        static bool caps_lock_on = false;  
+
         while (true) 
         {
             if (inb(0x64) & 0x01) 
             {
                 uint8_t scancode = inb(KB_DATA_PORT);
-                static const char scancode_ascii[] = {
+
+                if (scancode == 0x2A || scancode == 0x36) 
+                {
+                    shift_pressed = true;
+                    continue;
+                }
+                else if (scancode == 0xAA || scancode == 0xB6) 
+                {
+                    shift_pressed = false;
+                    continue;
+                }
+
+                if (scancode == 0x3A)
+                {
+                    caps_lock_on = !caps_lock_on;
+                    continue;
+                }
+
+                static const char scancode_lowercase[] = {
                     0, 27, '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '=', '\b',
                     '\t', 'q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p', '[', ']', '\n',
                     0, 'a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', ';', '\'', '`', 0, '\\',
                     'z', 'x', 'c', 'v', 'b', 'n', 'm', ',', '.', '/', 0, '*', 0, ' ', 0
                 };
-                if (scancode < 128) return scancode_ascii[scancode];
+
+                static const char scancode_uppercase[] = {
+                    0, 27, '!', '@', '#', '$', '%', '^', '&', '*', '(', ')', '_', '+', '\b',
+                    '\t', 'Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P', '{', '}', '\n',
+                    0, 'A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L', ':', '"', '~', 0, '|',
+                    'Z', 'X', 'C', 'V', 'B', 'N', 'M', '<', '>', '?', 0, '*', 0, ' ', 0
+                };
+
+                if (scancode < 128) 
+                {
+                    const char* character_set = scancode_lowercase;
+
+                    if (caps_lock_on)
+                    {
+                        if ((scancode >= 0x10 && scancode <= 0x19) || 
+                            (scancode >= 0x1E && scancode <= 0x26) || 
+                            (scancode >= 0x2C && scancode <= 0x32))   
+                        {
+                            character_set = scancode_uppercase;
+                        }
+                    }
+
+                    if (shift_pressed)
+                    {
+                        if (character_set == scancode_lowercase)
+                            character_set = scancode_uppercase; 
+                        else
+                            character_set = scancode_lowercase; 
+                    }
+
+                    return character_set[scancode];
+                }
             }
         }
     }
