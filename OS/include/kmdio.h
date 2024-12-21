@@ -5,11 +5,6 @@
 #define KB_DATA_PORT 0x60
 #define ENTER 0x1c
 #define BACKSPACE 0x0e
-#define VGA_H 25
-#define VGA_W 80
-#define KB_DATA_PORT 0x60
-#define ENTER 0x1c
-#define BACKSPACE 0x0e
 #define BLACK 0x00
 #define BLUE 0x01
 #define GREEN 0x02
@@ -43,7 +38,7 @@
 /*
     Usage
         kout << "X = " << 4;
-        kin >> buffer;
+        kout << blue << "hello" << reset << endl;
         clear() - clear console
 */
 
@@ -71,7 +66,8 @@ namespace kmdio
 
         if (isNegative) value = -value;
 
-        do {
+        do 
+        {
             buffer[i++] = '0' + (value % 10);
             value /= 10;
         } while (value);
@@ -80,7 +76,8 @@ namespace kmdio
 
         buffer[i] = '\0';
 
-        for (int j = 0; j < i / 2; j++) {
+        for (int j = 0; j < i / 2; j++) 
+        {
             char temp = buffer[j];
             buffer[j] = buffer[i - j - 1];
             buffer[i - j - 1] = temp;
@@ -108,7 +105,7 @@ namespace kmdio
         move_cursor();
     }
 
-    inline void putc(char c) 
+    inline void putc(char c, uint8_t color) 
     {
         if (c == '\n') 
         { 
@@ -119,12 +116,12 @@ namespace kmdio
             if (cursor_x > 0) 
             {
                 cursor_x--;
-                VIDEO_MEMORY[cursor_y * VGA_W + cursor_x] = (uint16_t)' ' | (WHITE << 8);
+                VIDEO_MEMORY[cursor_y * VGA_W + cursor_x] = (uint16_t)' ' | (color << 8);
             }
         } 
         else 
         {
-            VIDEO_MEMORY[cursor_y * VGA_W + cursor_x] = (uint16_t)c | (WHITE << 8);
+            VIDEO_MEMORY[cursor_y * VGA_W + cursor_x] = (uint16_t)c | (color << 8);
             cursor_x++;
         }
 
@@ -153,73 +150,100 @@ namespace kmdio
 
     class kout_stream 
     {
-    public:
-        kout_stream& operator<<(const char* str) 
-        {
-            while (*str) putc(*str++);
-            return *this;
-        }
+        private:
+            uint8_t current_color = VGA_COLOR(WHITE, BLACK); 
 
-        kout_stream& operator<<(int num) 
-        {
-            char buffer[12];
-            itoa(num, buffer);
-            return *this << buffer;
-        }
+        public:
+            kout_stream& operator<<(const char* str) 
+            {
+                while (*str) putc(*str++, current_color);
+                return *this;
+            }
 
-        kout_stream& operator<<(const kstring& str) 
-        {
-            for (int i = 0; i < str.size; ++i) putc(str[i]);
-            return *this;
-        }
+            kout_stream& operator<<(int num) 
+            {
+                char buffer[12];
+                itoa(num, buffer);
+                return *this << buffer;
+            }
+
+            kout_stream& operator<<(const kstring& str) 
+            {
+                for (int i = 0; i < str.size; ++i) putc(str[i], current_color);
+                return *this;
+            }
+
+            kout_stream& operator<<(uint8_t color) 
+            {
+                current_color = color;
+                return *this;
+            }
     };
 
     class kin_stream 
     {
-    public:
-        kin_stream& operator>>(char* buffer) 
-        {
-            int index = 0;
-            while (true) 
+        public:
+            kin_stream& operator>>(char* buffer) 
             {
-                char c = getc();
-                if (c == '\n') break;
-                if (c == '\b' && index > 0) 
+                int index = 0;
+                while (true) 
                 {
-                    index--;
-                    putc('\b');
-                } 
-                else if (c >= ' ') 
-                { 
-                    buffer[index++] = c;
-                    putc(c);
+                    char c = getc();
+                    if (c == '\n') break;
+                    if (c == '\b' && index > 0) 
+                    {
+                        index--;
+                        putc('\b', VGA_COLOR(WHITE, BLACK)); 
+                    } 
+                    else if (c >= ' ') 
+                    { 
+                        buffer[index++] = c;
+                        putc(c, VGA_COLOR(WHITE, BLACK));
+                    }
                 }
+                buffer[index] = '\0';
+                return *this;
             }
-            buffer[index] = '\0';
-            return *this;
-        }
-        kin_stream& operator>>(kstring& str) 
-        {
-            str.clear(); 
-            while (true) 
+            kin_stream& operator>>(kstring& str) 
             {
-                char c = getc();
-                if (c == '\n') break; 
-                if (c == '\b' && str.size > 0) 
-                { 
-                    str.size--; 
-                    putc('\b'); 
-                } 
-                else if (c >= ' ') 
+                str.clear(); 
+                while (true) 
                 {
-                    str.append(c); 
-                    putc(c);       
+                    char c = getc();
+                    if (c == '\n') break; 
+                    if (c == '\b' && str.size > 0) 
+                    { 
+                        str.size--; 
+                        putc('\b', VGA_COLOR(WHITE, BLACK)); 
+                    } 
+                    else if (c >= ' ') 
+                    {
+                        str.append(c); 
+                        putc(c, VGA_COLOR(WHITE, BLACK));       
+                    }
                 }
+                return *this;
             }
-            return *this;
-        }
     };
 
     inline kout_stream kout;
     inline kin_stream kin;
+
+    constexpr uint8_t reset = VGA_COLOR(WHITE, BLACK);
+    constexpr uint8_t black = VGA_COLOR(BLACK, BLACK);
+    constexpr uint8_t blue = VGA_COLOR(BLUE, BLACK);
+    constexpr uint8_t green = VGA_COLOR(GREEN, BLACK);
+    constexpr uint8_t cyan = VGA_COLOR(CYAN, BLACK);
+    constexpr uint8_t red = VGA_COLOR(RED, BLACK);
+    constexpr uint8_t magenta = VGA_COLOR(MAGENTA, BLACK);
+    constexpr uint8_t brown = VGA_COLOR(BROWN, BLACK);
+    constexpr uint8_t light_gray = VGA_COLOR(LIGHT_GRAY, BLACK);
+    constexpr uint8_t dark_gray = VGA_COLOR(DARK_GRAY, BLACK);
+    constexpr uint8_t light_blue = VGA_COLOR(LIGHT_BLUE, BLACK);
+    constexpr uint8_t light_green = VGA_COLOR(LIGHT_GREEN, BLACK);
+    constexpr uint8_t light_cyan = VGA_COLOR(LIGHT_CYAN, BLACK);
+    constexpr uint8_t light_red = VGA_COLOR(LIGHT_RED, BLACK);
+    constexpr uint8_t light_magenta = VGA_COLOR(LIGHT_MAGENTA, BLACK);
+    constexpr uint8_t yellow = VGA_COLOR(YELLOW, BLACK);
+    constexpr uint8_t white = VGA_COLOR(WHITE, BLACK);
 }

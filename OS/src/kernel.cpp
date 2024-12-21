@@ -21,11 +21,6 @@ extern "C" void call_global_constructors()
     }
 }
 
-void hello()
-{
-    kout << "Hello" << endl;
-}
-
 extern "C" void kmain(void) 
 {
     clear(WHITE); 
@@ -33,7 +28,7 @@ extern "C" void kmain(void)
     
     char buffer[100];
 
-    kout << "welcoe to nullOS" << endl;
+    kout << light_green << "welcome to nullOS" << reset << endl;
     
     kstring input;
 
