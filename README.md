@@ -13,9 +13,9 @@
 * List
 * Map
 * Tuple
+* Support for capital letters and special characters
 
 # To do
-* Support for capital letters input
 * Stack
 * Queue
 * Storage
