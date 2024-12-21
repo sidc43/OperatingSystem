@@ -11,6 +11,8 @@
 * String class
 * Dynamic memory management
 * List
+* Map
+* Tuple
 
 # To do
 * Support for capital letters input
