@@ -27,6 +27,7 @@
 #define YELLOW 0x0E
 #define WHITE 0x0F
 #define VGA_COLOR(fg, bg) ((bg << 4) | (fg))
+#define endl "\n"
 
 #ifndef size_t
     #if defined(__x86_64__) || defined(_M_X64)
@@ -195,6 +196,26 @@ namespace kmdio
                 }
             }
             buffer[index] = '\0';
+            return *this;
+        }
+        kin_stream& operator>>(kstring& str) 
+        {
+            str.clear(); 
+            while (true) 
+            {
+                char c = getc();
+                if (c == '\n') break; 
+                if (c == '\b' && str.size > 0) 
+                { 
+                    str.size--; 
+                    putc('\b'); 
+                } 
+                else if (c >= ' ') 
+                {
+                    str.append(c); 
+                    putc(c);       
+                }
+            }
             return *this;
         }
     };

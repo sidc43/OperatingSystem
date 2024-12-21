@@ -43,20 +43,6 @@ class kstring
             set(str);
         }
 
-        char& operator[](int index) 
-        {
-            static char dummy = '\0';
-            if (index < 0 || index >= size) return dummy;
-            return content[index];
-        }
-
-        const char& operator[](int index) const 
-        {
-            static char dummy = '\0';
-            if (index < 0 || index >= size) return dummy;
-            return content[index];
-        }
-
         void set(const char* str) 
         {
             size = 0; 
@@ -88,5 +74,51 @@ class kstring
             s.size = n;          
             s.content[n] = '\0'; 
             return s;
+        }
+
+        void clear() 
+        {
+            for (int i = 0; i < MAX_SIZE; i++) 
+            {
+                content[i] = '\0';
+            }
+            size = 0;
+        }
+
+        void append(char c) 
+        {
+            if (size < MAX_SIZE - 1) 
+            {
+                content[size++] = c;
+                content[size] = '\0';
+            }
+        }
+
+        bool operator==(kstring other)
+        {
+            if (other.size != size)
+                return false;
+            
+            for (int i = 0; i < size; i++)
+            {
+                if (content[i] != other[i])
+                    return false;
+            }
+
+            return true;
+        }
+        
+        char& operator[](int index) 
+        {
+            static char dummy = '\0';
+            if (index < 0 || index >= size) return dummy;
+            return content[index];
+        }
+
+        const char& operator[](int index) const 
+        {
+            static char dummy = '\0';
+            if (index < 0 || index >= size) return dummy;
+            return content[index];
         }
 };

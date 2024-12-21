@@ -1,3 +1,5 @@
+#pragma once
+
 #define NULL 0
 #define ALIGN4(x) (((((x)-1)>>2)<<2)+4)
 #define HEAP_SIZE 0x100000 
@@ -18,13 +20,11 @@ Block* free_list_head = NULL;
 
 void kernel_panic(const char* message) 
 {
-    //kout << ("KERNEL PANIC: ");
-    //kout << (message);
-    //kout << ("\nSystem Halted.");
+    kout << ("KERNEL PANIC: ") << (message) << ("\nSystem Halted.");
 
     while (true) 
     {
-        __asm__("hlt");
+        asm volatile("hlt");
     }
 }
 
