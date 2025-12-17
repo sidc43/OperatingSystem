@@ -12,15 +12,15 @@ extern "C" u8 el0_blob_start[];
 extern "C" u8 el0_blob_end[];
 
 extern "C" u64 g_el0_return_pc = 0;
-extern "C" u64 g_el0_result = 0;
+extern "C" u64 g_el0_result    = 0;
 
 namespace
 {
     static constexpr u64 PAGE_SIZE = 4096;
 
-    static constexpr u64 USER_BASE      = 0x0000000100000000ull;
-    static constexpr u64 USER_CODE_VA   = USER_BASE + 0x0000ull;
-    static constexpr u64 USER_STACK_VA  = USER_BASE + 0x10000ull;
+    static constexpr u64 USER_BASE     = 0x0000000100000000ull;
+    static constexpr u64 USER_CODE_VA  = USER_BASE + 0x0000ull;
+    static constexpr u64 USER_STACK_VA = USER_BASE + 0x10000ull;
 
     static inline u64 align_down(u64 v, u64 a)
     {
@@ -37,8 +37,6 @@ namespace
 
     static void icache_sync(void* start, u64 size)
     {
-        // Proper cache maintenance for copied code (important on real hw).
-        // QEMU often "works" without it, but do it correctly.
         u64 a = (u64)(uintptr_t)start;
         u64 end = a + size;
 
@@ -55,25 +53,6 @@ namespace
         asm volatile("dsb ish" ::: "memory");
         asm volatile("isb" ::: "memory");
     }
-
-    extern "C" void el0_return_point()
-    {
-        u64 el;
-        asm volatile("mrs %0, CurrentEL" : "=r"(el));
-        el = (el >> 2) & 3;
-
-        kprint::puts("\n[EL0 SMOKE] returned to EL1!\n");
-        kprint::puts("CurrentEL=");
-        kprint::dec_u64(el);
-        kprint::puts("\nEL0 final x0=");
-        kprint::dec_u64(g_el0_result);
-        kprint::puts("\n");
-
-        while (1)
-        {
-            asm volatile("wfe");
-        }
-    }
 }
 
 namespace tests
@@ -82,9 +61,7 @@ namespace tests
     {
         kprint::puts("\n=== usermode smoke test (EL0) ===\n");
 
-        g_el0_return_pc = (u64)(uintptr_t)&el0_return_point;
-
-        void* code_page = phys::alloc_page();
+        void* code_page  = phys::alloc_page();
         void* stack_page = phys::alloc_page();
 
         if (!code_page || !stack_page)
@@ -121,10 +98,21 @@ namespace tests
         u64 user_sp = USER_STACK_VA + PAGE_SIZE;
         user_sp = align_down(user_sp, 16);
 
+        g_el0_result = 0;
+
         kprint::puts("entering EL0...\n");
 
         enter_el0(user_sp, USER_CODE_VA, 41);
 
-        panic("enter_el0 returned");
+        u64 el;
+        asm volatile("mrs %0, CurrentEL" : "=r"(el));
+        el = (el >> 2) & 3;
+
+        kprint::puts("\n[EL0 SMOKE] returned back into C!\n");
+        kprint::puts("CurrentEL=");
+        kprint::dec_u64(el);
+        kprint::puts("\nEL0 final x0=");
+        kprint::dec_u64(g_el0_result);
+        kprint::puts("\n");
     }
 }

@@ -12,7 +12,6 @@ namespace
     static constexpr u64 DEVICE_SIZE = 0x40000000ull;
 
     static constexpr u64 PAGE_SIZE = 4096;
-    static constexpr u64 TABLE_ENTRIES = 512;
 
     static constexpr u64 DESC_INVALID = 0;
     static constexpr u64 DESC_TABLE   = 0b11;
@@ -22,16 +21,14 @@ namespace
     static constexpr u64 SH_NONE  = (0ull << 8);
     static constexpr u64 SH_INNER = (3ull << 8);
 
-    static constexpr u64 AP_EL1_RW = (0ull << 6);
-    static constexpr u64 AP_EL0_RW = (1ull << 6);
+    // AP[2:1] at bits [7:6]
+    static constexpr u64 AP_EL1_RW = (0ull << 6); // EL0 no, EL1 RW
+    static constexpr u64 AP_EL0_RW = (1ull << 6); // EL0 RW, EL1 RW
 
     static constexpr u64 PXN = (1ull << 53);
     static constexpr u64 UXN = (1ull << 54);
 
-    static constexpr u64 ATTRINDX(u64 i)
-    {
-        return (i & 0x7) << 2;
-    }
+    static constexpr u64 ATTRINDX(u64 i) { return (i & 0x7) << 2; }
 
     static constexpr u64 MAIR_ATTR_NORMAL = 0xFF;
     static constexpr u64 MAIR_ATTR_DEVICE = 0x04;
@@ -41,78 +38,45 @@ namespace
     static inline void zero_page(void* p)
     {
         volatile u64* w = (volatile u64*)p;
-        for (usize i = 0; i < (PAGE_SIZE / 8); i++)
-        {
-            w[i] = 0;
-        }
+        for (usize i = 0; i < (PAGE_SIZE / 8); i++) w[i] = 0;
     }
 
-    static inline u64 idx_l1(u64 va)
-    {
-        return (va >> 30) & 0x1FF;
-    }
+    static inline u64 idx_l1(u64 va) { return (va >> 30) & 0x1FF; }
+    static inline u64 idx_l2(u64 va) { return (va >> 21) & 0x1FF; }
+    static inline u64 idx_l3(u64 va) { return (va >> 12) & 0x1FF; }
 
-    static inline u64 idx_l2(u64 va)
-    {
-        return (va >> 21) & 0x1FF;
-    }
-
-    static inline u64 idx_l3(u64 va)
-    {
-        return (va >> 12) & 0x1FF;
-    }
-
-    static inline u64 table_pa_from_desc(u64 desc)
-    {
-        return desc & 0x0000FFFFFFFFF000ull;
-    }
-
-    static inline bool is_table_desc(u64 desc)
-    {
-        return (desc & 0b11) == DESC_TABLE;
-    }
-
-    static inline u64 make_table_desc(u64 table_pa)
-    {
-        return (table_pa & 0x0000FFFFFFFFF000ull) | DESC_TABLE;
-    }
+    static inline u64 table_pa_from_desc(u64 desc) { return desc & 0x0000FFFFFFFFF000ull; }
+    static inline bool is_table_desc(u64 desc) { return (desc & 0b11) == DESC_TABLE; }
+    static inline u64 make_table_desc(u64 table_pa) { return (table_pa & 0x0000FFFFFFFFF000ull) | DESC_TABLE; }
 
     static inline u64 make_page_desc(u64 pa, u64 flags)
     {
         bool device = (flags & vm::DEVICE) != 0;
         bool noexec = (flags & vm::NOEXEC) != 0;
-        bool user   = (flags & vm::USER) != 0;
+        bool user   = (flags & vm::USER)   != 0;
 
         u64 attr = device ? ATTRINDX(1) : ATTRINDX(0);
         u64 sh   = device ? SH_NONE : SH_INNER;
 
         u64 ap = user ? AP_EL0_RW : AP_EL1_RW;
 
+        // XN bits:
+        // - For kernel mappings: UXN always (EL0 never executes kernel pages)
+        // - For user mappings:
+        //    * user code: allow EL0 exec => UXN=0 (unless NOEXEC)
+        //    * user stack/data: UXN=1 when NOEXEC
+        //    * PXN=1 always on user pages so EL1 can’t execute user pages
         u64 xn = 0;
 
         if (user)
         {
-            // User mappings:
-            // - prevent EL1 execution from user pages
             xn |= PXN;
-
-            // - allow EL0 execute only if not NOEXEC
-            if (noexec)
-            {
-                xn |= UXN;
-            }
+            if (noexec) xn |= UXN;
         }
         else
         {
-            // Kernel mappings:
-            // - never allow EL0 to execute kernel pages
             xn |= UXN;
-
-            // - block EL1 execute for device/noexec
-            if (device || noexec)
-            {
-                xn |= PXN;
-            }
+            if (device || noexec) xn |= PXN;
         }
 
         return (pa & 0x0000FFFFFFFFF000ull) |
@@ -131,21 +95,14 @@ namespace
         if (e == DESC_INVALID)
         {
             void* page = phys::alloc_page();
-            if (page == nullptr)
-            {
-                return nullptr;
-            }
+            if (!page) return nullptr;
 
             zero_page(page);
             parent[index] = make_table_desc((u64)(uintptr_t)page);
             return (u64*)page;
         }
 
-        if (!is_table_desc(e))
-        {
-            return nullptr;
-        }
-
+        if (!is_table_desc(e)) return nullptr;
         return (u64*)(uintptr_t)table_pa_from_desc(e);
     }
 
@@ -161,20 +118,16 @@ namespace
         u64 mair =
             (MAIR_ATTR_NORMAL << (0 * 8)) |
             (MAIR_ATTR_DEVICE << (1 * 8));
-
         asm volatile("msr MAIR_EL1, %0" :: "r"(mair));
 
         u64 tcr = 0;
-
-        tcr |= (25ull << 0);   
-
-        tcr |= (0ull  << 14);  
-        tcr |= (3ull  << 12);  
-        tcr |= (1ull  << 10);  
-        tcr |= (1ull  << 8);   
-
-        tcr |= (0ull  << 7);   
-        tcr |= (1ull  << 23);  
+        tcr |= (25ull << 0);     // T0SZ=25 => 39-bit VA
+        tcr |= (0ull  << 14);    // TG0=4KB
+        tcr |= (3ull  << 12);    // SH0=Inner
+        tcr |= (1ull  << 10);    // ORGN0=WBWA
+        tcr |= (1ull  << 8);     // IRGN0=WBWA
+        tcr |= (0ull  << 7);     // EPD0=0
+        tcr |= (1ull  << 23);    // EPD1=1
 
         u64 parange = read_parange();
         u64 ips = (parange > 6) ? 6 : parange;
@@ -224,10 +177,7 @@ namespace vm
     void init()
     {
         void* root = phys::alloc_page();
-        if (root == nullptr)
-        {
-            panic("vm::init: no memory for L1");
-        }
+        if (!root) panic("vm::init: no memory for L1");
 
         zero_page(root);
         g_l1 = (u64*)root;
@@ -240,10 +190,7 @@ namespace vm
 
     void switch_to_kernel_table()
     {
-        if (g_l1 == nullptr)
-        {
-            panic("vm::switch_to_kernel_table: vm not initialized");
-        }
+        if (!g_l1) panic("vm::switch_to_kernel_table: vm not initialized");
 
         mmu_set_mair_tcr_ttbr0((u64)(uintptr_t)g_l1);
         mmu_enable_if_needed();
@@ -253,34 +200,17 @@ namespace vm
 
     bool map_page(u64 va, u64 pa, u64 flags)
     {
-        if ((va & (PAGE_SIZE - 1)) != 0 || (pa & (PAGE_SIZE - 1)) != 0)
-        {
-            return false;
-        }
-
-        if (g_l1 == nullptr)
-        {
-            return false;
-        }
+        if ((va & (PAGE_SIZE - 1)) != 0 || (pa & (PAGE_SIZE - 1)) != 0) return false;
+        if (!g_l1) return false;
 
         u64* l2 = ensure_table(g_l1, idx_l1(va));
-        if (l2 == nullptr)
-        {
-            return false;
-        }
+        if (!l2) return false;
 
         u64* l3 = ensure_table(l2, idx_l2(va));
-        if (l3 == nullptr)
-        {
-            return false;
-        }
+        if (!l3) return false;
 
         u64 i3 = idx_l3(va);
-
-        if (l3[i3] != DESC_INVALID)
-        {
-            return false;
-        }
+        if (l3[i3] != DESC_INVALID) return false;
 
         l3[i3] = make_page_desc(pa, flags);
 
@@ -288,44 +218,24 @@ namespace vm
         asm volatile("tlbi vae1, %0" :: "r"(va >> 12));
         asm volatile("dsb ish" ::: "memory");
         asm volatile("isb" ::: "memory");
-
         return true;
     }
 
     bool unmap_page(u64 va)
     {
-        if ((va & (PAGE_SIZE - 1)) != 0)
-        {
-            return false;
-        }
-
-        if (g_l1 == nullptr)
-        {
-            return false;
-        }
+        if ((va & (PAGE_SIZE - 1)) != 0) return false;
+        if (!g_l1) return false;
 
         u64 e1 = g_l1[idx_l1(va)];
-        if (!is_table_desc(e1))
-        {
-            return false;
-        }
-
+        if (!is_table_desc(e1)) return false;
         u64* l2 = (u64*)(uintptr_t)table_pa_from_desc(e1);
 
         u64 e2 = l2[idx_l2(va)];
-        if (!is_table_desc(e2))
-        {
-            return false;
-        }
-
+        if (!is_table_desc(e2)) return false;
         u64* l3 = (u64*)(uintptr_t)table_pa_from_desc(e2);
 
         u64 i3 = idx_l3(va);
-
-        if (l3[i3] == DESC_INVALID)
-        {
-            return false;
-        }
+        if (l3[i3] == DESC_INVALID) return false;
 
         l3[i3] = DESC_INVALID;
 
@@ -333,34 +243,18 @@ namespace vm
         asm volatile("tlbi vae1, %0" :: "r"(va >> 12));
         asm volatile("dsb ish" ::: "memory");
         asm volatile("isb" ::: "memory");
-
         return true;
     }
 
     bool map_range(u64 va, u64 pa, u64 size, u64 flags)
     {
-        if ((va & (PAGE_SIZE - 1)) != 0 || (pa & (PAGE_SIZE - 1)) != 0)
+        if ((va & (PAGE_SIZE - 1)) != 0 || (pa & (PAGE_SIZE - 1)) != 0) return false;
+
+        u64 end = va + ((size + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1));
+        for (u64 cur_va = va, cur_pa = pa; cur_va < end; cur_va += PAGE_SIZE, cur_pa += PAGE_SIZE)
         {
-            return false;
+            if (!map_page(cur_va, cur_pa, flags)) return false;
         }
-
-        u64 start = va;
-        u64 end   = va + ((size + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1));
-
-        u64 cur_va = start;
-        u64 cur_pa = pa;
-
-        while (cur_va < end)
-        {
-            if (!map_page(cur_va, cur_pa, flags))
-            {
-                return false;
-            }
-
-            cur_va += PAGE_SIZE;
-            cur_pa += PAGE_SIZE;
-        }
-
         return true;
     }
 }

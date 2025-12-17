@@ -6,7 +6,11 @@
 #include "kernel/mm/vm/vm.hpp"
 #include "kernel/mm/heap/kheap.hpp"
 
-#include "kernel/tests/usermode_tests.hpp"
+#include "drivers/interrupt/gicv2/gicv2.hpp"
+#include "drivers/timer/arch_timer.hpp"
+#include "kernel/irq/irq.hpp"
+
+#include "kernel/usermode/usersched.hpp"
 
 extern "C" void kernel_main(u64)
 {
@@ -18,8 +22,15 @@ extern "C" void kernel_main(u64)
 
     kheap::init();
 
-    kprint::puts("\n[kernel] starting EL0 smoke test...\n");
-    tests::usermode_smoke_test();
+    gicv2::init();
+    gicv2::enable_int(30);
 
-    panic("kernel_main: returned from usermode_smoke_test");
+    arch_timer::init_100hz();
+    irq::enable();
+
+    kprint::puts("\n[kernel] timer heartbeat (expect dots)...\n");
+
+    usersched::start_ab();
+
+    panic("kernel_main: usersched returned unexpectedly");
 }

@@ -18,7 +18,6 @@ namespace sched
         // U1 cooperative switch context (still used for bootstrap start)
         Context ctx {};
 
-        // Stack allocation
         void*   stack_base {};
         usize   stack_size {};
 

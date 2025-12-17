@@ -3,9 +3,7 @@
 .global vector_table
 
 .macro VEC id
-    sub sp, sp, #16
-    str x0, [sp, #0]    
-    mov x0, #\id  
+    mov x0, #\id
     b vector_common
 .endm
 
@@ -49,14 +47,14 @@ vector_table:
 .global vector_common
 .type vector_common, %function
 vector_common:
-    sub sp, sp, #256
+    sub sp, sp, #272
 
-    str x1, [sp, #8]
 
-    stp x2,  x3,  [sp, #16]
-    stp x4,  x5,  [sp, #32]
-    stp x6,  x7,  [sp, #48]
-    stp x8,  x9,  [sp, #64]
+    stp x0,  x1, [sp, #0]
+    stp x2,  x3, [sp, #16]
+    stp x4,  x5, [sp, #32]
+    stp x6,  x7, [sp, #48]
+    stp x8,  x9, [sp, #64]
     stp x10, x11, [sp, #80]
     stp x12, x13, [sp, #96]
     stp x14, x15, [sp, #112]
@@ -69,8 +67,6 @@ vector_common:
     stp x28, x29, [sp, #224]
     str x30, [sp, #240]
 
-    ldr x15, [sp, #256]  
-    str x15, [sp, #0]  
 
     mrs x5, CurrentEL
     cmp x5, #0x8
@@ -87,8 +83,10 @@ vector_common:
     mrs x3, FAR_EL2
 
 2:
-    mov x4, sp  
+    mov x4, sp
     bl exception_dispatch
+
+    mov sp, x0
 
     ldr x30, [sp, #240]
     ldp x28, x29, [sp, #224]
@@ -105,11 +103,9 @@ vector_common:
     ldp x6,  x7,  [sp, #48]
     ldp x4,  x5,  [sp, #32]
     ldp x2,  x3,  [sp, #16]
-    ldr x1,  [sp, #8]
-    ldr x0,  [sp, #0]
+    ldp x0,  x1,  [sp, #0]
 
-    add sp, sp, #256
-    add sp, sp, #16
+    add sp, sp, #272
     eret
 
 .size vector_common, . - vector_common

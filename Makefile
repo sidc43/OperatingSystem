@@ -22,11 +22,11 @@ ASM_SOURCES := \
   src/arch/aarch64/cpu/context_switch.S \
   src/arch/aarch64/cpu/thread_trampoline.S \
   src/arch/aarch64/cpu/enter_el0.S \
-  src/arch/aarch64/usermode/el0_blob.S
+  src/arch/aarch64/cpu/enter_el0_ctx.S \
+  src/arch/aarch64/usermode/el0_blob.S \
+  src/arch/aarch64/usermode/el0_yield_blob.S
 
-
-# Compile everything, but exclude the kernel-side exceptions folder to avoid duplicate exception_dispatch.
-CPP_SOURCES := $(filter-out kernel/arch/aarch64/exceptions/%,$(shell find kernel drivers hal src -name '*.cpp' 2>/dev/null))
+CPP_SOURCES := $(shell find kernel drivers hal src -name '*.cpp' 2>/dev/null)
 
 ASM_OBJS := $(patsubst %.S,$(BUILD)/%.o,$(ASM_SOURCES))
 CPP_OBJS := $(patsubst %.cpp,$(BUILD)/%.o,$(CPP_SOURCES))

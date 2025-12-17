@@ -1,19 +1,12 @@
-#include "types.hpp"
+#include "src/arch/aarch64/exceptions/exception.hpp"
 
 #include "kernel/core/print.hpp"
 #include "kernel/core/panic.hpp"
 #include "kernel/irq/irq.hpp"
-
-extern "C" u64 g_el0_return_pc;
-extern "C" u64 g_el0_result;
+#include "kernel/syscall/syscall.hpp"
 
 namespace
 {
-    struct TrapFrame
-    {
-        u64 x[31]; // x0..x30
-    };
-
     static inline u64 current_el()
     {
         u64 v;
@@ -21,83 +14,50 @@ namespace
         return (v >> 2) & 3;
     }
 
-    static inline u64 esr_ec(u64 esr)
-    {
-        return (esr >> 26) & 0x3Fu;
-    }
+    static inline u64 esr_ec(u64 esr) { return (esr >> 26) & 0x3Fu; }
 
-    static inline void set_elr(u64 v)
+    static inline void irq_disable()
     {
-        // In your banner you saw CurrentEL=1, so ELR_EL1 is the correct one.
-        asm volatile("msr ELR_EL1, %0" :: "r"(v));
-        asm volatile("isb");
-    }
-
-    static inline void set_spsr(u64 v)
-    {
-        asm volatile("msr SPSR_EL1, %0" :: "r"(v));
-        asm volatile("isb");
+        asm volatile("msr daifset, #2" ::: "memory");
     }
 }
 
 extern "C" void exception_dispatch(u64 vector_id, u64 esr, u64 elr, u64 far, void* frame)
 {
-    // IRQ vectors
+    // IRQ vectors (cover SP0/SPx and lower EL variants)
     if (vector_id == 1 || vector_id == 5 || vector_id == 9 || vector_id == 13)
     {
         irq::handle();
         return;
     }
 
-    // SVC64: EC = 0x15
-    if (esr_ec(esr) == 0x15)
+    // EL0 synchronous
+    if (vector_id == 8)
     {
-        static bool banner = false;
-        if (!banner)
+        // SVC64 => syscall layer
+        if (esr_ec(esr) == 0x15)
         {
-            banner = true;
-            kprint::puts("\n[exception] SVC handler ACTIVE. CurrentEL=");
-            kprint::dec_u64(current_el());
-            kprint::puts("\n");
-        }
-
-        TrapFrame* tf = (TrapFrame*)frame;
-        u64 sysno = (esr & 0xFFFFu);
-
-        if (sysno == 0)
-        {
-            // svc #0: increment x0 and return
-            kprint::putc('s');
-            tf->x[0] = tf->x[0] + 1;
-
-            // IMPORTANT: do NOT elr+4 here on your setup (it skips the subs)
-            // Just return; ELR already resumes at the correct next instruction.
-            (void)elr;
+            (void)syscall::handle_svc(esr, elr, frame);
             return;
         }
 
-        if (sysno == 1)
-        {
-            kprint::puts("\n[svc #1] returning to kernel...\n");
-            g_el0_result = tf->x[0];
-
-            // Return to EL1h
-            set_spsr(5);
-            set_elr(g_el0_return_pc);
-            return;
-        }
-
-        // Unknown syscall: just return
-        tf->x[0] = (u64)-1;
-        return;
+        // Any other EL0 sync => dump once and stop (prevents recursive trash output)
+        irq_disable();
+        kprint::puts("\n=== EXCEPTION (EL0 sync, non-SVC) ===\n");
+        kprint::puts("CurrentEL: "); kprint::dec_u64(current_el()); kprint::puts("\n");
+        kprint::puts("vector_id: "); kprint::dec_u64(vector_id); kprint::puts("\n");
+        kprint::puts("ESR: "); kprint::hex_u64(esr); kprint::puts("\n");
+        kprint::puts("ELR: "); kprint::hex_u64(elr); kprint::puts("\n");
+        kprint::puts("FAR: "); kprint::hex_u64(far); kprint::puts("\n");
+        panic("EL0 fault");
     }
 
+    irq_disable();
     kprint::puts("\n=== EXCEPTION ===\n");
-    kprint::puts("vector_id: "); kprint::dec_u64(vector_id);
-    kprint::puts("\nCurrentEL: "); kprint::dec_u64(current_el());
-    kprint::puts("\nESR: ");      kprint::hex_u64(esr);
-    kprint::puts("\nELR: ");      kprint::hex_u64(elr);
-    kprint::puts("\nFAR: ");      kprint::hex_u64(far);
-    kprint::puts("\n");
+    kprint::puts("CurrentEL: "); kprint::dec_u64(current_el()); kprint::puts("\n");
+    kprint::puts("vector_id: "); kprint::dec_u64(vector_id); kprint::puts("\n");
+    kprint::puts("ESR: "); kprint::hex_u64(esr); kprint::puts("\n");
+    kprint::puts("ELR: "); kprint::hex_u64(elr); kprint::puts("\n");
+    kprint::puts("FAR: "); kprint::hex_u64(far); kprint::puts("\n");
     panic("exception");
 }

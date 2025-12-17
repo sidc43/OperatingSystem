@@ -11,17 +11,18 @@ namespace irq
 {
     void enable()
     {
-        asm volatile("msr daifclr, #2");
+        asm volatile("msr daifclr, #2" ::: "memory");
     }
 
     void disable()
     {
-        asm volatile("msr daifset, #2");
+        asm volatile("msr daifset, #2" ::: "memory");
     }
 
     void handle()
     {
-        u32 intid = gicv2::ack();
+        u32 iar = gicv2::ack();
+        u32 intid = iar & 0x3FF;
 
         if (intid == 1023)
         {
@@ -33,6 +34,6 @@ namespace irq
             arch_timer::on_irq();
         }
 
-        gicv2::eoi(intid);
+        gicv2::eoi(iar);
     }
 }
