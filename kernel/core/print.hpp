@@ -1,11 +1,14 @@
+/*
+  print.hpp - declarations for serial debug output helpers
+  printk supports %s %c %d %u %x %p %%
+*/
 #pragma once
-#include "types.hpp"
 
-namespace kprint 
-{
-    void putc(char c);
-    void puts(const char* s);
+void putc(char c);
 
-    void hex_u64(u64 x);
-    void dec_u64(u64 x);
-}
+void print(const char* s);
+
+void print_hex(unsigned long long v);
+void print_dec(unsigned long long v);
+
+void printk(const char* fmt, ...);
