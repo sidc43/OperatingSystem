@@ -1,8 +1,9 @@
 # aarch64 os
 
-a bare-metal operating system for aarch64 that runs on qemu. it has a full gui with a window manager, taskbar, start menu, and a bunch of apps. everything runs without linux - just the kernel, drivers written from scratch, and a graphics stack on top of virtio-gpu.
+a bare-metal operating system for aarch64 that runs on qemu. it has a full gui with a window manager, taskbar, start menu, and some apps.
 
-## what's in it
+<img width="1288" height="842" alt="image" src="https://github.com/user-attachments/assets/0e54cdd8-3855-489c-be82-00f2fde49fe3" />
+<img width="1288" height="842" alt="image" src="https://github.com/user-attachments/assets/1ca8f4b2-c35c-4403-94fe-eaf7a9c1e2df" />
 
 **system**
 - aarch64 kernel booting directly via qemu virt machine
@@ -21,22 +22,6 @@ a bare-metal operating system for aarch64 that runs on qemu. it has a full gui w
 - virtio-keyboard driver with full ascii + nav key decoding
 - virtio-tablet driver for absolute mouse position
 - software rasterizer: fill_rect, draw_text, blit, alpha composite, lines
-
-**window manager**
-- floating windows with drag, title bar, close/maximize buttons
-- taskbar with window buttons
-- start menu with pinned apps + scrollable/searchable "all programs" panel
-- desktop with icon grid (single-click select, double-click launch)
-- win98-style ui theme
-
-**apps**
-- **shell** - terminal emulator with a small unix command set (ls, cat, touch, rm, mkdir, cd, echo, clear)
-- **text editor** - line-based editor with arrow keys, home/end, pgup/pgdn, save/quit
-- **calculator** - 4-function floating-point with keyboard + mouse input
-- **file explorer** - scrollable file browser with right-click context menu, open/delete/new
-- **paint** - pixel-art canvas with palette swatches and three brush sizes
-- **system monitor** - cpu chart, memory bar, uptime, process list with end-task
-- **control panel** - clock, wallpaper color picker, per-app window size settings, shutdown
 
 **clock**
 - reads the pl031 hardware rtc (qemu exposes actual host time)
